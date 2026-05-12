@@ -5,15 +5,19 @@ import { eq } from "drizzle-orm";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mooretradingco.com";
-  const rows = await db
-    .select({ slug: products.slug, updatedAt: products.updatedAt })
-    .from(products)
-    .where(eq(products.isActive, true));
-
-  const productEntries = rows.map((r) => ({
-    url: `${base}/shop/${r.slug}`,
-    lastModified: r.updatedAt,
-  }));
+  let productEntries: MetadataRoute.Sitemap = [];
+  try {
+    const rows = await db
+      .select({ slug: products.slug, updatedAt: products.updatedAt })
+      .from(products)
+      .where(eq(products.isActive, true));
+    productEntries = rows.map((r) => ({
+      url: `${base}/shop/${r.slug}`,
+      lastModified: r.updatedAt,
+    }));
+  } catch (err) {
+    console.warn("[sitemap] could not fetch products:", err);
+  }
 
   return [
     { url: base, changeFrequency: "weekly" as const, priority: 1 },
