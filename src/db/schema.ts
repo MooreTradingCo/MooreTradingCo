@@ -201,6 +201,7 @@ export const orders = pgTable("orders", {
   shippingMethod: varchar("shipping_method", { length: 80 }),
   trackingNumber: varchar("tracking_number", { length: 80 }),
 
+  squareOrderId: varchar("square_order_id", { length: 80 }),
   squarePaymentId: varchar("square_payment_id", { length: 80 }),
   squareReceiptUrl: text("square_receipt_url"),
 

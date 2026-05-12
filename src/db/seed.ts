@@ -164,6 +164,7 @@ async function main() {
       { key: "free_shipping_threshold_cents", value: "7500" },
       { key: "shipping_origin_zip", value: process.env.SHIP_FROM_ZIP ?? "00000" },
       { key: "shipping_origin_state", value: process.env.SHIP_FROM_STATE ?? "" },
+      { key: "tax_rates_json", value: "{}" },
     ])
     .onConflictDoNothing();
 

@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { auth } from "@/auth";
 import { slugify } from "@/lib/utils";
+import { saveTaxRateMap, type TaxRateMap } from "@/lib/tax";
 
 async function requireAdmin() {
   const session = await auth();
@@ -193,6 +194,17 @@ export async function saveCategory(_: AdminResult | null, formData: FormData): P
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err?.message ?? "Could not save category" };
+  }
+}
+
+export async function saveTaxRates(rates: TaxRateMap): Promise<AdminResult> {
+  try {
+    await requireAdmin();
+    await saveTaxRateMap(rates);
+    revalidatePath("/admin/settings");
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err?.message ?? "Could not save tax rates" };
   }
 }
 

@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
 import { getCart, clearCartCookie } from "@/server/cart";
 import { quoteShipping } from "@/lib/shipping";
-import { calculateTaxCents } from "@/lib/tax";
+import { taxPercentageForState } from "@/lib/tax";
 import { getSquareClient, squareLocationId } from "@/lib/square";
 import { sendEmail } from "@/lib/email";
 import { OrderConfirmationEmail } from "@/lib/email/templates/order-confirmation";
@@ -27,6 +27,8 @@ const addressSchema = z.object({
   country: z.string().length(2).default("US"),
 });
 
+type AddressInput = z.infer<typeof addressSchema>;
+
 export type CheckoutQuote = {
   subtotalCents: number;
   shippingCents: number;
@@ -35,50 +37,131 @@ export type CheckoutQuote = {
   totalCents: number;
 };
 
-export async function quoteCheckout(input: z.infer<typeof addressSchema>): Promise<
+type CartLineForOrder = {
+  id: number;
+  productId: number;
+  name: string;
+  priceCents: number;
+  quantity: number;
+  stockQty: number;
+};
+
+/**
+ * Build a Square Order request shared between calculate and create.
+ * Tax is added as an ad-hoc additive ORDER-scoped tax (line items only, not shipping).
+ * Shipping is added as a TOTAL_PHASE service charge so it isn't taxed.
+ */
+async function buildSquareOrder(opts: {
+  cartLines: CartLineForOrder[];
+  shipping: { method: string; amountCents: number };
+  shippingState: string;
+}) {
+  const lineItems = opts.cartLines.map((l) => ({
+    uid: `line-${l.productId}`,
+    name: l.name,
+    quantity: String(l.quantity),
+    basePriceMoney: { amount: BigInt(l.priceCents), currency: "USD" as const },
+  }));
+
+  const taxPercentage = await taxPercentageForState(opts.shippingState);
+  const taxes = taxPercentage
+    ? [
+        {
+          uid: "sales-tax",
+          name: `${opts.shippingState.toUpperCase()} Sales Tax`,
+          percentage: taxPercentage,
+          scope: "ORDER" as const,
+          type: "ADDITIVE" as const,
+        },
+      ]
+    : undefined;
+
+  const serviceCharges =
+    opts.shipping.amountCents > 0
+      ? [
+          {
+            uid: "shipping",
+            name: opts.shipping.method,
+            amountMoney: {
+              amount: BigInt(opts.shipping.amountCents),
+              currency: "USD" as const,
+            },
+            calculationPhase: "TOTAL_PHASE" as const,
+            taxable: false,
+          },
+        ]
+      : undefined;
+
+  return {
+    locationId: squareLocationId,
+    lineItems,
+    taxes,
+    serviceCharges,
+  };
+}
+
+async function shippingAndCart(input: AddressInput) {
+  const cart = await getCart();
+  if (cart.lines.length === 0) {
+    return { ok: false as const, error: "Your cart is empty" };
+  }
+  const totalWeightOz = cart.lines.reduce((s, l) => s + l.quantity * 4, 0);
+  const shipping = await quoteShipping({
+    subtotalCents: cart.subtotalCents,
+    weightOz: totalWeightOz,
+    toZip: input.postalCode,
+    toState: input.region,
+  });
+  return { ok: true as const, cart, shipping };
+}
+
+export async function quoteCheckout(input: AddressInput): Promise<
   | { ok: true; quote: CheckoutQuote }
   | { ok: false; error: string }
 > {
   const parsed = addressSchema.safeParse(input);
-  if (!parsed.success) {
-    return { ok: false, error: "Invalid shipping address" };
+  if (!parsed.success) return { ok: false, error: "Invalid shipping address" };
+
+  const sc = await shippingAndCart(parsed.data);
+  if (!sc.ok) return sc;
+  const { cart, shipping } = sc;
+
+  if (!squareLocationId) {
+    return { ok: false, error: "Store is not configured for payments yet" };
   }
 
-  const cart = await getCart();
-  if (cart.lines.length === 0) return { ok: false, error: "Your cart is empty" };
+  let calc;
+  try {
+    const square = getSquareClient();
+    const orderBody = await buildSquareOrder({
+      cartLines: cart.lines,
+      shipping: { method: shipping.method, amountCents: shipping.amountCents },
+      shippingState: parsed.data.region,
+    });
+    calc = await square.orders.calculate({ order: orderBody });
+  } catch (err: any) {
+    console.error("[checkout] orders.calculate failed:", err);
+    return {
+      ok: false,
+      error: err?.errors?.[0]?.detail ?? err?.message ?? "Could not calculate totals",
+    };
+  }
 
-  const totalWeightOz = cart.lines.reduce((s, l) => s + l.quantity * 4, 0);
+  const order = calc.order;
+  if (!order) return { ok: false, error: "Square did not return an order" };
 
-  const shipping = await quoteShipping({
-    subtotalCents: cart.subtotalCents,
-    weightOz: totalWeightOz,
-    toZip: parsed.data.postalCode,
-    toState: parsed.data.region,
-  });
-
-  const taxCents = await calculateTaxCents({
-    shipping: {
-      toZip: parsed.data.postalCode,
-      toState: parsed.data.region,
-      toCity: parsed.data.city,
-      toCountry: parsed.data.country,
-    },
-    shippingCents: shipping.amountCents,
-    lineItems: cart.lines.map((l) => ({
-      id: String(l.productId),
-      quantity: l.quantity,
-      unitPriceCents: l.priceCents,
-    })),
-  });
+  const totalTax = Number(order.totalTaxMoney?.amount ?? 0n);
+  const totalService = Number(order.totalServiceChargeMoney?.amount ?? 0n);
+  const total = Number(order.totalMoney?.amount ?? 0n);
 
   return {
     ok: true,
     quote: {
       subtotalCents: cart.subtotalCents,
-      shippingCents: shipping.amountCents,
+      shippingCents: totalService,
       shippingMethod: shipping.method,
-      taxCents,
-      totalCents: cart.subtotalCents + shipping.amountCents + taxCents,
+      taxCents: totalTax,
+      totalCents: total,
     },
   };
 }
@@ -96,40 +179,63 @@ export async function placeOrder(
   const parsed = placeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid checkout payload" };
 
-  const cart = await getCart();
-  if (cart.lines.length === 0) return { ok: false, error: "Your cart is empty" };
+  const sc = await shippingAndCart(parsed.data);
+  if (!sc.ok) return sc;
+  const { cart, shipping } = sc;
 
-  const session = await auth();
-
-  // Re-quote on the server to avoid client tampering
-  const quoted = await quoteCheckout(parsed.data);
-  if (!quoted.ok) return quoted;
-  const { quote } = quoted;
-
-  // Verify stock once more
   for (const line of cart.lines) {
     if (line.stockQty < line.quantity) {
       return { ok: false, error: `Not enough stock for ${line.name}` };
     }
   }
+  if (!squareLocationId) {
+    return { ok: false, error: "Store is not configured for payments yet" };
+  }
 
-  // Charge via Square
+  const session = await auth();
+  const square = getSquareClient();
+
+  // 1) Create the Square Order (server-authoritative totals)
+  let squareOrderId: string | null = null;
+  let totalCents = 0;
+  let taxCents = 0;
+  let shippingCents = 0;
+  try {
+    const orderBody = await buildSquareOrder({
+      cartLines: cart.lines,
+      shipping: { method: shipping.method, amountCents: shipping.amountCents },
+      shippingState: parsed.data.region,
+    });
+    const res = await square.orders.create({
+      idempotencyKey: randomUUID(),
+      order: orderBody,
+    });
+    if (!res.order?.id) {
+      return { ok: false, error: "Square did not return an order" };
+    }
+    squareOrderId = res.order.id;
+    totalCents = Number(res.order.totalMoney?.amount ?? 0n);
+    taxCents = Number(res.order.totalTaxMoney?.amount ?? 0n);
+    shippingCents = Number(res.order.totalServiceChargeMoney?.amount ?? 0n);
+  } catch (err: any) {
+    console.error("[checkout] orders.create failed:", err);
+    return {
+      ok: false,
+      error: err?.errors?.[0]?.detail ?? err?.message ?? "Could not create order",
+    };
+  }
+
+  // 2) Charge the card and link the payment to the Square order
   let squarePaymentId: string | null = null;
   let squareReceiptUrl: string | null = null;
   try {
-    const square = getSquareClient();
-    if (!squareLocationId) {
-      return { ok: false, error: "Store is not configured for payments yet" };
-    }
     const res = await square.payments.create({
       idempotencyKey: randomUUID(),
       sourceId: parsed.data.sourceId,
       verificationToken: parsed.data.verificationToken,
       locationId: squareLocationId,
-      amountMoney: {
-        amount: BigInt(quote.totalCents),
-        currency: "USD",
-      },
+      orderId: squareOrderId,
+      amountMoney: { amount: BigInt(totalCents), currency: "USD" },
       buyerEmailAddress: parsed.data.email,
       shippingAddress: {
         addressLine1: parsed.data.line1,
@@ -139,7 +245,7 @@ export async function placeOrder(
         postalCode: parsed.data.postalCode,
         country: parsed.data.country as "US",
       },
-      note: `MTC order via mooretradingco.com`,
+      note: "MTC order via mooretradingco.com",
     });
 
     const payment = res.payment;
@@ -149,14 +255,14 @@ export async function placeOrder(
     squarePaymentId = payment.id ?? null;
     squareReceiptUrl = payment.receiptUrl ?? null;
   } catch (err: any) {
-    console.error("[checkout] Square payment failed:", err);
+    console.error("[checkout] payments.create failed:", err);
     return {
       ok: false,
       error: err?.errors?.[0]?.detail ?? err?.message ?? "Payment failed. Please try again.",
     };
   }
 
-  // Persist the order
+  // 3) Persist locally
   const orderNumber = generateOrderNumber();
   const [order] = await db
     .insert(orders)
@@ -165,11 +271,12 @@ export async function placeOrder(
       userId: session?.user?.id ?? null,
       email: parsed.data.email.toLowerCase(),
       status: "paid",
-      subtotalCents: quote.subtotalCents,
-      shippingCents: quote.shippingCents,
-      taxCents: quote.taxCents,
-      totalCents: quote.totalCents,
-      shippingMethod: quote.shippingMethod,
+      subtotalCents: cart.subtotalCents,
+      shippingCents,
+      taxCents,
+      totalCents,
+      shippingMethod: shipping.method,
+      squareOrderId,
       squarePaymentId,
       squareReceiptUrl,
       shippingName: parsed.data.fullName,
@@ -193,7 +300,6 @@ export async function placeOrder(
     })),
   );
 
-  // Decrement stock
   for (const line of cart.lines) {
     await db
       .update(products)
@@ -201,13 +307,11 @@ export async function placeOrder(
       .where(eq(products.id, line.productId));
   }
 
-  // Clear the cart
   if (cart.id) {
     await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
   }
   await clearCartCookie();
 
-  // Send confirmation email (fire and forget)
   try {
     await sendEmail({
       to: parsed.data.email,
@@ -220,10 +324,10 @@ export async function placeOrder(
           quantity: l.quantity,
           priceCents: l.priceCents,
         })),
-        subtotalCents: quote.subtotalCents,
-        shippingCents: quote.shippingCents,
-        taxCents: quote.taxCents,
-        totalCents: quote.totalCents,
+        subtotalCents: cart.subtotalCents,
+        shippingCents,
+        taxCents,
+        totalCents,
         shipTo: {
           line1: parsed.data.line1,
           line2: parsed.data.line2,

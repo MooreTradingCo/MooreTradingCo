@@ -8,9 +8,8 @@ E-commerce storefront for [mooretradingco.com](https://mooretradingco.com): smal
 - **Tailwind CSS v4** + shadcn/ui-style Radix primitives
 - **Neon Postgres** + **Drizzle ORM** (edge-compatible HTTP driver)
 - **Auth.js v5** (NextAuth) with Drizzle adapter; credentials + email verification
-- **Square** Web Payments SDK + Node SDK for checkout
+- **Square** Web Payments SDK + Node SDK for checkout; Square Orders API for tax & order totals
 - **Resend** (transactional email) + **React Email** templates
-- **TaxJar** for sales-tax calculation at checkout
 - **USPS** Domestic Prices API for shipping rates (flat-rate fallback)
 - **Vercel Blob** for product image storage
 - **Cloudflare Web Analytics** beacon
@@ -89,6 +88,14 @@ src/
   middleware.ts      route protection for /account and /admin
   auth.ts            Auth.js configuration
 ```
+
+## Sales tax
+
+Tax is handled by Square's Orders API at checkout. You configure a per-state percentage in `/admin/settings → Sales tax rates by state`; on checkout we call `orders.calculate` and `orders.create` so Square does the math and the tax shows up in your Square reports.
+
+- Add a row for every state where you have sales-tax nexus (typically just your home state to start).
+- Leave a state out entirely to charge zero tax there.
+- Square computes tax against line-item subtotals only; shipping is added as a `TOTAL_PHASE` service charge and isn't taxed.
 
 ## Square sandbox → production
 

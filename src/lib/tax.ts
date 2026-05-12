@@ -1,61 +1,59 @@
 import "server-only";
-import Taxjar from "taxjar";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { settings } from "@/db/schema";
 
-const apiToken = process.env.TAXJAR_API_TOKEN;
-const sandbox = process.env.TAXJAR_SANDBOX === "true";
+const TAX_RATES_KEY = "tax_rates_json";
 
-let _client: Taxjar | null = null;
-function client() {
-  if (!apiToken) return null;
-  if (!_client) {
-    _client = new Taxjar({
-      apiKey: apiToken,
-      apiUrl: sandbox ? Taxjar.SANDBOX_API_URL : Taxjar.DEFAULT_API_URL,
-    });
+export type TaxRateMap = Record<string, string>;
+
+/** Reads { "WA": "8.8", "CA": "7.25", ... } from the settings table. */
+export async function getTaxRateMap(): Promise<TaxRateMap> {
+  const [row] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, TAX_RATES_KEY))
+    .limit(1);
+  if (!row?.value) return {};
+  try {
+    const parsed = JSON.parse(row.value);
+    if (parsed && typeof parsed === "object") {
+      const out: TaxRateMap = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        const upper = String(k).toUpperCase();
+        const rate = String(v);
+        if (upper && rate && !Number.isNaN(Number(rate))) out[upper] = rate;
+      }
+      return out;
+    }
+  } catch (err) {
+    console.warn("[tax] tax_rates_json is malformed:", err);
   }
-  return _client;
+  return {};
 }
 
-/**
- * Returns sales-tax cents for an order. Falls back to 0 if TaxJar is not
- * configured (the owner can configure it before going live).
- */
-export async function calculateTaxCents(opts: {
-  shipping: {
-    toZip: string;
-    toState: string;
-    toCity: string;
-    toCountry?: string;
-  };
-  shippingCents: number;
-  lineItems: { id: string; quantity: number; unitPriceCents: number }[];
-}): Promise<number> {
-  const c = client();
-  if (!c) return 0;
-  const fromZip = process.env.SHIP_FROM_ZIP ?? "";
-  const fromState = process.env.SHIP_FROM_STATE ?? "";
-  if (!fromZip || !fromState) return 0;
-
-  try {
-    const res = await c.taxForOrder({
-      from_country: "US",
-      from_state: fromState,
-      from_zip: fromZip,
-      to_country: opts.shipping.toCountry ?? "US",
-      to_state: opts.shipping.toState,
-      to_zip: opts.shipping.toZip,
-      to_city: opts.shipping.toCity,
-      shipping: opts.shippingCents / 100,
-      line_items: opts.lineItems.map((li) => ({
-        id: li.id,
-        quantity: li.quantity,
-        unit_price: li.unitPriceCents / 100,
-        product_tax_code: "40030", // grocery food
-      })),
-    });
-    return Math.round((res.tax.amount_to_collect ?? 0) * 100);
-  } catch (err) {
-    console.warn("[tax] TaxJar lookup failed; charging $0 tax:", err);
-    return 0;
+export async function saveTaxRateMap(map: TaxRateMap): Promise<void> {
+  const cleaned: TaxRateMap = {};
+  for (const [k, v] of Object.entries(map)) {
+    const upper = String(k).toUpperCase().trim();
+    const num = Number(v);
+    if (upper && upper.length === 2 && Number.isFinite(num) && num >= 0) {
+      cleaned[upper] = String(num);
+    }
   }
+  const value = JSON.stringify(cleaned);
+  await db
+    .insert(settings)
+    .values({ key: TAX_RATES_KEY, value, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: settings.key,
+      set: { value, updatedAt: new Date() },
+    });
+}
+
+/** Returns the tax percentage (as a string like "8.8") for a shipping state, or null. */
+export async function taxPercentageForState(state: string | null | undefined): Promise<string | null> {
+  if (!state) return null;
+  const map = await getTaxRateMap();
+  return map[state.toUpperCase()] ?? null;
 }
