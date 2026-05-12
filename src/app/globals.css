@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #faf6f0;
+  --color-brand-100: #f0e6d2;
+  --color-brand-200: #e0c89e;
+  --color-brand-300: #c9a16a;
+  --color-brand-400: #b07f44;
+  --color-brand-500: #8f6230;
+  --color-brand-600: #6f4a23;
+  --color-brand-700: #553819;
+  --color-brand-800: #3d2912;
+  --color-brand-900: #2a1c0c;
+
+  --color-accent-500: #b53a2a;
+  --color-accent-600: #8f2c1f;
+
+  --color-cream: #f7f2e8;
+  --color-charcoal: #1f1c18;
+
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+:root {
+  --background: var(--color-cream);
+  --foreground: var(--color-charcoal);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: var(--color-charcoal);
+    --foreground: var(--color-cream);
+  }
+}
+
+html, body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Reduce flash on initial Square card load */
+.sq-card-iframe-container {
+  min-height: 56px;
+}
