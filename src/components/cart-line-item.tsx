@@ -14,10 +14,10 @@ export function CartLineItem({ line }: { line: CartLine }) {
   const maxQty = Math.min(line.stockQty, 10);
 
   return (
-    <div className="flex gap-4 bg-white rounded-lg border border-brand-200 p-4">
+    <div className="flex gap-4 bg-stone-100 ring-1 ring-stone-300 rounded-2xl p-4">
       <Link
         href={`/shop/${line.slug}`}
-        className="relative w-24 h-24 rounded overflow-hidden bg-brand-100 flex-shrink-0"
+        className="relative w-24 h-24 rounded-xl overflow-hidden bg-stone-200 flex-shrink-0"
       >
         {line.imageUrl && (
           <Image
@@ -34,21 +34,21 @@ export function CartLineItem({ line }: { line: CartLine }) {
         <div className="flex justify-between gap-3">
           <Link
             href={`/shop/${line.slug}`}
-            className="font-medium text-brand-900 hover:text-accent-500"
+            className="font-display text-lg font-semibold text-forest-900 hover:text-chili-600 transition-colors"
           >
             {line.name}
           </Link>
-          <p className="font-semibold text-brand-900 whitespace-nowrap">
+          <p className="font-semibold text-forest-900 whitespace-nowrap">
             {formatMoney(line.lineTotalCents)}
           </p>
         </div>
-        <p className="text-sm text-brand-700 mt-1">
+        <p className="text-sm text-ink/70 mt-1">
           {formatMoney(line.priceCents)} each
         </p>
 
         <div className="mt-auto flex items-center justify-between pt-3">
           <div className="flex items-center gap-2">
-            <label htmlFor={`q-${line.id}`} className="text-sm text-brand-700">
+            <label htmlFor={`q-${line.id}`} className="text-sm text-forest-700">
               Qty
             </label>
             <select
@@ -61,7 +61,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
                   void updateCartQuantity(line.id, q);
                 });
               }}
-              className="h-9 rounded-md border border-brand-200 bg-white px-2 text-sm"
+              className="h-9 rounded-md border border-stone-400 bg-cream px-2 text-sm font-medium text-forest-900"
             >
               {Array.from({ length: Math.max(1, maxQty) }, (_, i) => i + 1).map((n) => (
                 <option key={n} value={n}>
@@ -74,7 +74,7 @@ export function CartLineItem({ line }: { line: CartLine }) {
             type="button"
             disabled={pending}
             onClick={() => startTransition(() => { void removeFromCart(line.id); })}
-            className="inline-flex items-center gap-1 text-sm text-brand-600 hover:text-accent-500"
+            className="inline-flex items-center gap-1 text-sm font-medium text-forest-700 hover:text-chili-600 transition-colors"
           >
             <Trash2 className="h-4 w-4" /> Remove
           </button>

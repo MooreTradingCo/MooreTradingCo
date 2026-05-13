@@ -1,37 +1,79 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #faf6f0;
-  --color-brand-100: #f0e6d2;
-  --color-brand-200: #e0c89e;
-  --color-brand-300: #c9a16a;
-  --color-brand-400: #b07f44;
-  --color-brand-500: #8f6230;
-  --color-brand-600: #6f4a23;
-  --color-brand-700: #553819;
-  --color-brand-800: #3d2912;
-  --color-brand-900: #2a1c0c;
+  --color-cream: #fbf7ef;
+  --color-ink: #16140f;
 
-  --color-accent-500: #b53a2a;
-  --color-accent-600: #8f2c1f;
+  --color-forest-50: #eef5f1;
+  --color-forest-100: #d6e6dd;
+  --color-forest-300: #6ea089;
+  --color-forest-500: #2a5f4b;
+  --color-forest-700: #1f4a3a;
+  --color-forest-900: #14322a;
 
-  --color-cream: #f7f2e8;
-  --color-charcoal: #1f1c18;
+  --color-chili-300: #f08368;
+  --color-chili-500: #d94b2a;
+  --color-chili-600: #b73a1f;
+  --color-chili-700: #8e2a13;
 
-  --font-display: "Playfair Display", Georgia, serif;
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --color-mustard-300: #f1c66a;
+  --color-mustard-400: #e8b13b;
+  --color-mustard-500: #c98e1b;
+
+  --color-stone-100: #f5efe2;
+  --color-stone-200: #ece4d5;
+  --color-stone-300: #d5cab4;
+  --color-stone-400: #b7ad97;
+  --color-stone-600: #7a715f;
+
+  /* Legacy brand-* aliases kept temporarily so unrelated views render
+     without thrashing during the migration. New components should use the
+     palette above. */
+  --color-brand-50: var(--color-stone-100);
+  --color-brand-100: var(--color-stone-200);
+  --color-brand-200: var(--color-stone-300);
+  --color-brand-300: var(--color-stone-400);
+  --color-brand-600: var(--color-stone-600);
+  --color-brand-700: var(--color-forest-700);
+  --color-brand-800: var(--color-forest-900);
+  --color-brand-900: var(--color-forest-900);
+  --color-accent-500: var(--color-chili-500);
+  --color-accent-600: var(--color-chili-600);
+  --color-charcoal: var(--color-ink);
+
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
+  --font-accent: var(--font-caveat), "Comic Sans MS", cursive;
+
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-wiggle: wiggle 600ms ease-in-out;
+  --animate-rotate-word: rotate-word 8s steps(4) infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-3deg); }
+  75%      { transform: rotate(3deg); }
+}
+
+/* Step through the four hero adjectives. The .rotating-words element is
+   sized to one line; its children stack vertically and we translate up
+   one line at a time. */
+@keyframes rotate-word {
+  0%,  22% { transform: translateY(0); }
+  25%, 47% { transform: translateY(-100%); }
+  50%, 72% { transform: translateY(-200%); }
+  75%, 97% { transform: translateY(-300%); }
 }
 
 :root {
   --background: var(--color-cream);
-  --foreground: var(--color-charcoal);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: var(--color-charcoal);
-    --foreground: var(--color-cream);
-  }
+  --foreground: var(--color-ink);
 }
 
 html, body {
@@ -44,7 +86,8 @@ html, body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
 }
 
 a {
@@ -56,7 +99,50 @@ a {
   box-sizing: border-box;
 }
 
-/* Reduce flash on initial Square card load */
+/* Paper-grain texture. A tiny inline SVG turbulence layered at low
+   opacity gives surfaces a hand-printed feel without shipping an image. */
+.paper {
+  position: relative;
+}
+.paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.7 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  background-size: 220px 220px;
+}
+
+/* Rotating word component for the hero. */
+.rotating-words {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  line-height: 1;
+}
+.rotating-words > span {
+  display: block;
+  animation: var(--animate-rotate-word);
+}
+
+/* Hand-stamped underline below "wilder" etc. */
+.wavy-underline {
+  position: relative;
+  display: inline-block;
+}
+.wavy-underline svg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.18em;
+  width: 100%;
+  height: 0.32em;
+  pointer-events: none;
+}
+
+/* Square Web Payments SDK reserves space so we don't get layout shift. */
 .sq-card-iframe-container {
   min-height: 56px;
 }

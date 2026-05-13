@@ -46,9 +46,9 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
       <div className="space-y-3">
-        <div className="aspect-square relative rounded-lg overflow-hidden bg-brand-100">
+        <div className="aspect-square relative rounded-2xl overflow-hidden bg-stone-200 ring-1 ring-stone-300">
           {mainImage && (
             <Image
               src={mainImage}
@@ -66,8 +66,8 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
                 key={img.url}
                 type="button"
                 onClick={() => setMainImage(img.url)}
-                className={`aspect-square relative rounded overflow-hidden border-2 ${
-                  mainImage === img.url ? "border-brand-700" : "border-transparent"
+                className={`aspect-square relative rounded-lg overflow-hidden border-2 transition ${
+                  mainImage === img.url ? "border-forest-900" : "border-transparent hover:border-stone-400"
                 }`}
               >
                 <Image src={img.url} alt={img.alt ?? ""} fill sizes="80px" className="object-cover" />
@@ -79,42 +79,42 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
 
       <div>
         {product.categoryName && (
-          <p className="text-xs uppercase tracking-wider text-brand-600 mb-2">
-            {product.categoryName}
+          <p className="font-accent text-chili-500 text-2xl -rotate-1 origin-left">
+            {product.categoryName.toLowerCase()}
           </p>
         )}
-        <h1 className="font-display text-3xl sm:text-4xl text-brand-900">
+        <h1 className="font-display font-semibold text-4xl sm:text-5xl text-forest-900 mt-1 leading-[1.05]">
           {product.name}
         </h1>
-        <p className="mt-3 text-2xl font-semibold text-brand-900">
+        <p className="mt-4 font-display text-3xl font-semibold text-chili-600">
           {formatMoney(product.priceCents)}
         </p>
-        <p className="text-sm text-brand-600 mt-1">
+        <p className="text-sm text-forest-700 mt-1">
           {product.weightOz} oz
           {outOfStock ? " · Sold out" : product.stockQty < 10 ? ` · Only ${product.stockQty} left` : ""}
         </p>
 
         {product.shortDescription && (
-          <p className="mt-6 text-brand-800 leading-relaxed">
+          <p className="mt-6 text-ink/85 text-lg leading-relaxed">
             {product.shortDescription}
           </p>
         )}
         {product.description && (
-          <p className="mt-3 text-brand-700 leading-relaxed">
+          <p className="mt-3 text-ink/75 leading-relaxed">
             {product.description}
           </p>
         )}
         {product.ingredients && (
-          <div className="mt-6">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-brand-700">
+          <div className="mt-8 pt-6 border-t border-stone-300">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-forest-700">
               Ingredients
             </h3>
-            <p className="mt-2 text-sm text-brand-700">{product.ingredients}</p>
+            <p className="mt-2 text-sm text-ink/80 leading-relaxed">{product.ingredients}</p>
           </div>
         )}
 
         <div className="mt-8 flex items-center gap-3">
-          <label htmlFor={`qty-${product.id}`} className="text-sm text-brand-800">
+          <label htmlFor={`qty-${product.id}`} className="text-sm font-medium text-forest-900">
             Qty
           </label>
           <select
@@ -122,7 +122,7 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
             value={qty}
             onChange={(e) => setQty(Number(e.target.value))}
             disabled={outOfStock}
-            className="h-10 rounded-md border border-brand-200 bg-white px-3 text-sm"
+            className="h-12 rounded-full border-2 border-forest-900 bg-cream px-4 text-sm font-medium text-forest-900"
           >
             {Array.from({ length: Math.max(1, maxQty) }, (_, i) => i + 1).map((n) => (
               <option key={n} value={n}>
@@ -150,7 +150,7 @@ export function ProductDetail({ product }: { product: ProductDetailData }) {
           </Button>
         </div>
 
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-3 text-sm text-chili-700">{error}</p>}
       </div>
     </div>
   );

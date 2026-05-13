@@ -1,18 +1,25 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Caveat, DM_Sans, Fraunces } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const inter = Inter({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["opsz", "SOFT"],
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  variable: "--font-dm-sans",
   display: "swap",
 });
 
-const playfair = Playfair_Display({
+const caveat = Caveat({
   subsets: ["latin"],
-  variable: "--font-display",
+  variable: "--font-caveat",
   display: "swap",
 });
 
@@ -21,15 +28,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://mooretradingco.com"
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Moore Trading Co. — Small-batch seasonings, sauces & salts",
+    default: "Moore Trading Co. — Small-batch pantry stuff that makes food taste better",
     template: "%s | Moore Trading Co.",
   },
   description:
-    "Moore Trading Co. crafts small-batch seasonings, finishing salts, sauces, and prepared foods. Hand-blended, never mass-produced.",
+    "We make small-batch pantry stuff — seasonings, sauces, salts, chili crisp and whatever's next — that makes everything else taste like it tried harder.",
   openGraph: {
     title: "Moore Trading Co.",
     description:
-      "Small-batch seasonings, sauces, salts, and prepared foods. Shipped fresh.",
+      "Small-batch pantry stuff that makes food taste better. Hand-blended, never mass-produced.",
     url: siteUrl,
     siteName: "Moore Trading Co.",
     type: "website",
@@ -48,7 +55,10 @@ export default function RootLayout({
 }) {
   const cfToken = process.env.NEXT_PUBLIC_CF_ANALYTICS_TOKEN;
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+    <html
+      lang="en"
+      className={`${fraunces.variable} ${dmSans.variable} ${caveat.variable}`}
+    >
       <body>
         {children}
         {modal}

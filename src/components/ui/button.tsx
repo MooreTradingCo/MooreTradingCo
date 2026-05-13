@@ -6,26 +6,29 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-[transform,background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mustard-400 focus-visible:ring-offset-2 focus-visible:ring-offset-cream active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-brand-700 text-cream hover:bg-brand-800 shadow-sm",
+          "bg-forest-900 text-cream hover:bg-forest-700 shadow-sm",
         accent:
-          "bg-accent-500 text-white hover:bg-accent-600 shadow-sm",
+          "bg-chili-500 text-cream hover:bg-chili-600 shadow-sm",
         outline:
-          "border border-brand-700 text-brand-800 hover:bg-brand-100",
-        ghost: "hover:bg-brand-100 text-brand-800",
-        link: "underline-offset-4 hover:underline text-brand-700",
+          "border-2 border-forest-900 text-forest-900 hover:bg-forest-900 hover:text-cream",
+        ghost:
+          "text-forest-900 hover:bg-stone-200",
+        link:
+          "text-chili-600 hover:text-chili-700 underline-offset-4 hover:underline",
         destructive:
-          "bg-red-600 text-white hover:bg-red-700",
+          "bg-chili-700 text-cream hover:bg-chili-700/90",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-8 px-3 text-xs",
-        lg: "h-12 px-6 text-base",
-        icon: "h-10 w-10",
+        default: "h-10 px-4 py-2 rounded-md text-sm",
+        sm: "h-8 px-3 rounded-md text-xs",
+        lg: "h-12 px-6 rounded-full text-base",
+        xl: "h-14 px-8 rounded-full text-lg",
+        icon: "h-10 w-10 rounded-full",
       },
     },
     defaultVariants: { variant: "default", size: "default" },
