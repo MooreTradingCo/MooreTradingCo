@@ -11,6 +11,7 @@ import {
   Squiggle,
   WigglyUnderline,
 } from "@/components/decorations";
+import heroImg from "./images/Hero.png";
 
 export const revalidate = 60;
 
@@ -58,52 +59,71 @@ export default async function HomePage() {
       {/* HERO ------------------------------------------------------------- */}
       <section className="paper relative bg-cream overflow-hidden">
         {/* Floating decorations */}
-        <Asterisk
-          size={96}
-          className="absolute top-12 right-[6%] text-mustard-400 hidden md:block animate-[wiggle_6s_ease-in-out_infinite]"
-        />
         <Sparkle
           size={28}
-          className="absolute top-1/3 left-[8%] text-chili-500 hidden md:block"
+          className="absolute top-1/3 left-[8%] text-chili-500 hidden md:block lg:left-[4%]"
         />
         <Sparkle
           size={20}
-          className="absolute bottom-1/4 right-[14%] text-forest-700 hidden md:block"
+          className="absolute bottom-1/4 right-[14%] text-forest-700 hidden md:block lg:hidden"
         />
 
-        <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-36 lg:pb-40">
-          <p className="font-accent text-chili-500 text-2xl sm:text-3xl -rotate-2 origin-left">
-            from a small kitchen, with love
-          </p>
+        <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-32 lg:pb-32">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-12 lg:gap-16 items-center">
+            <div>
+              <p className="font-accent text-chili-500 text-2xl sm:text-3xl -rotate-2 origin-left">
+                from a small kitchen, with love
+              </p>
 
-          <h1 className="font-display font-semibold text-forest-900 mt-4 text-[clamp(2.75rem,9vw,8rem)] leading-[0.95] tracking-tight max-w-5xl">
-            <span className="block">We make food</span>
-            <span className="block">taste{" "}
-              <span className="wavy-underline text-chili-500">
-                <span className="rotating-words h-[1em]">
-                  <span>{ROTATING_WORDS[0]}</span>
-                  <span>{ROTATING_WORDS[1]}</span>
-                  <span>{ROTATING_WORDS[2]}</span>
-                  <span>{ROTATING_WORDS[3]}</span>
+              <h1 className="font-display font-semibold text-forest-900 mt-4 text-[clamp(2.75rem,7.5vw,6.5rem)] leading-[0.95] tracking-tight">
+                <span className="block">We make food</span>
+                <span className="block">taste{" "}
+                  <span className="wavy-underline text-chili-500">
+                    <span className="rotating-words h-[1em]">
+                      <span>{ROTATING_WORDS[0]}</span>
+                      <span>{ROTATING_WORDS[1]}</span>
+                      <span>{ROTATING_WORDS[2]}</span>
+                      <span>{ROTATING_WORDS[3]}</span>
+                    </span>
+                    <WigglyUnderline className="text-mustard-400" />
+                  </span>
                 </span>
-                <WigglyUnderline className="text-mustard-400" />
-              </span>
-            </span>
-          </h1>
+              </h1>
 
-          <p className="mt-8 text-lg sm:text-xl text-ink/80 max-w-2xl leading-relaxed">
-            Small-batch pantry stuff &mdash; seasonings, sauces, salts, chili
-            crisp, and whatever else we feel like making next. Real
-            ingredients. Tiny batches. Shipped fresh from our kitchen to yours.
-          </p>
+              <p className="mt-8 text-lg sm:text-xl text-ink/80 max-w-xl leading-relaxed">
+                Small-batch pantry stuff &mdash; seasonings, sauces, salts, chili
+                crisp, and whatever else we feel like making next. Real
+                ingredients. Tiny batches. Shipped fresh from our kitchen to yours.
+              </p>
 
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Button asChild size="xl" variant="accent">
-              <Link href="/shop">Shop everything &rarr;</Link>
-            </Button>
-            <Button asChild size="xl" variant="outline">
-              <Link href="/about">Our story</Link>
-            </Button>
+              <div className="mt-10 flex flex-wrap gap-3">
+                <Button asChild size="xl" variant="accent">
+                  <Link href="/shop">Shop everything &rarr;</Link>
+                </Button>
+                <Button asChild size="xl" variant="outline">
+                  <Link href="/about">Our story</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <Asterisk
+                size={72}
+                className="absolute -top-6 -right-2 lg:-top-8 lg:-right-6 text-mustard-400 z-10 animate-[wiggle_6s_ease-in-out_infinite]"
+              />
+              <Sparkle
+                size={28}
+                className="absolute -bottom-3 -left-3 text-chili-500 z-10"
+              />
+              <Image
+                src={heroImg}
+                alt="Moore Trading Co. small-batch jars"
+                priority
+                placeholder="blur"
+                sizes="(min-width:1024px) 480px, (min-width:640px) 60vw, 100vw"
+                className="w-full h-auto max-w-md lg:max-w-none mx-auto rounded-3xl object-contain"
+              />
+            </div>
           </div>
         </div>
       </section>
