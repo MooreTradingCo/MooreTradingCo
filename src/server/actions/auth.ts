@@ -3,7 +3,7 @@
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { eq, and, gt } from "drizzle-orm";
-import { redirect } from "next/navigation";
+import { AuthError } from "next-auth";
 
 import { db } from "@/db";
 import { users, passwordResetTokens, verificationTokens } from "@/db/schema";
@@ -72,13 +72,26 @@ export async function registerUser(_: ActionResult | null, formData: FormData): 
     console.error("[register] failed to send verify email", err);
   }
 
-  // Sign the user in automatically
-  await signIn("credentials", {
-    email,
-    password,
-    redirect: false,
-  });
-  redirect("/account");
+  // Sign the user in automatically. We let Auth.js perform the redirect itself
+  // (via redirectTo) so the session Set-Cookie header is committed on the
+  // redirect response. Any other approach in v5 + Server Actions drops the
+  // session cookie and bounces the user back to /login.
+  try {
+    await signIn("credentials", {
+      email,
+      password,
+      redirectTo: "/account",
+    });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return {
+        ok: false,
+        error: "Account created but sign-in failed. Please log in.",
+      };
+    }
+    throw err;
+  }
+  return { ok: true };
 }
 
 const loginSchema = z.object({
@@ -99,12 +112,17 @@ export async function loginUser(_: ActionResult | null, formData: FormData): Pro
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirect: false,
+      redirectTo: parsed.data.callbackUrl || "/account",
     });
   } catch (err) {
-    return { ok: false, error: "Invalid email or password" };
+    if (err instanceof AuthError) {
+      return { ok: false, error: "Invalid email or password" };
+    }
+    // Re-throw NEXT_REDIRECT and any other non-auth errors so Next.js can
+    // handle them (the redirect signal is how successful sign-in navigates).
+    throw err;
   }
-  redirect(parsed.data.callbackUrl || "/account");
+  return { ok: true };
 }
 
 export async function logoutUser() {
